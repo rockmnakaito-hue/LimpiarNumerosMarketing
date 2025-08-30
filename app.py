@@ -31,7 +31,7 @@ def build_phonumber_column(df: pd.DataFrame, column: str, keep_plus=True) -> pd.
     return df_result
 
 def load_stop_list() -> pd.DataFrame:
-    """Carga la lista STOP si existe, usando siempre la primera columna como 'phonumber'"""
+    """Carga la lista STOP si existe, usando siempre la primera columna como 'phonumber' y normalizando"""
     if STOP_FILE.exists():
         try:
             df = pd.read_csv(STOP_FILE)
@@ -42,6 +42,9 @@ def load_stop_list() -> pd.DataFrame:
             df = df.rename(columns={first_col: "phonumber"})
             df = df[["phonumber"]]
             # Limpiar duplicados y vacíos
+            df = df.dropna().drop_duplicates().reset_index(drop=True)
+            # Normalizar los números STOP
+            df["phonumber"] = df["phonumber"].apply(lambda x: normalize_to_us_e164(x, keep_plus=True))
             df = df.dropna().drop_duplicates().reset_index(drop=True)
             return df
         except Exception:
@@ -138,11 +141,14 @@ if uploaded_stop is not None:
         if new_stop.shape[1] == 0:
             st.sidebar.error("❌ El archivo está vacío.")
         else:
-            # Siempre tomar la primera columna y llamarla 'phonumber'
+            # Tomar primera columna y renombrar
             first_col = new_stop.columns[0]
             new_stop = new_stop.rename(columns={first_col: "phonumber"})
             new_stop = new_stop[["phonumber"]]
             # Limpiar duplicados y vacíos
+            new_stop = new_stop.dropna().drop_duplicates().reset_index(drop=True)
+            # Normalizar números STOP
+            new_stop["phonumber"] = new_stop["phonumber"].apply(lambda x: normalize_to_us_e164(x, keep_plus=True))
             new_stop = new_stop.dropna().drop_duplicates().reset_index(drop=True)
             
             save_stop_list(new_stop)
